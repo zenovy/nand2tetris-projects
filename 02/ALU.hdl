@@ -27,20 +27,46 @@
 // if (out < 0) set ng = 1
 
 CHIP ALU {
-    IN  
-        x[16], y[16],  // 16-bit inputs        
-        zx, // zero the x input?
-        nx, // negate the x input?
-        zy, // zero the y input?
-        ny, // negate the y input?
-        f,  // compute out = x + y (if 1) or x & y (if 0)
-        no; // negate the out output?
+  IN  
+      x[16], y[16],  // 16-bit inputs        
+      zx, // zero the x input?
+      nx, // negate the x input?
+      zy, // zero the y input?
+      ny, // negate the y input?
+      f,  // compute out = x + y (if 1) or x & y (if 0)
+      no; // negate the out output?
 
-    OUT 
-        out[16], // 16-bit output
-        zr, // 1 if (out == 0), 0 otherwise
-        ng; // 1 if (out < 0),  0 otherwise
+  OUT 
+      out[16], // 16-bit output
+      zr, // 1 if (out == 0), 0 otherwise
+      ng; // 1 if (out < 0),  0 otherwise
 
-    PARTS:
-   // Put you code here:
+  PARTS:
+    // apply zx and nx to x
+    Mux16(a=x, b=false, sel=zx, out=zxout);
+    Not16(in=zxout, out=zxnotout);
+    Mux16(a=zxout, b=zxnotout, sel=nx, out=xend);
+
+    // apply zy and ny to y
+    Mux16(a=y, b=false, sel=zy, out=zyout);
+    Not16(in=zyout, out=zynotout);
+    Mux16(a=zyout, b=zynotout, sel=ny, out=yend);
+
+    // apply f
+    Add16(a=xend, b=yend, out=fadd);
+    And16(a=xend, b=yend, out=fand);
+
+    // determine out
+    Mux16(a=fand, b=fadd, sel=f, out=res);
+    Not16(in=res, out=notres);
+    Mux16(a=res, b=notres, sel=no, out=outres);
+    And16(a=outres, b=outres, out=out);
+
+    // determine zr
+    Or16Way(in=outres, out=outnz);
+    Not(in=outnz, out=zr);
+
+    // determine ng
+    And16(a=outres, b[0..14]=false, b[15]=true, out=neg);
+    Or16Way(in=neg, out=ng);
 }
