@@ -11,4 +11,54 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// Put your code here.
+(START)
+// Listen for keyboard input
+@KBD
+D=M
+@EMPTYINIT
+D;JEQ
+
+
+// Fill screen
+@KBD
+D=-A
+@SCREEN
+D=D+A
+(FILL)
+@KBD
+D=D+A
+A=D
+M=-1
+D=D+1
+// Jump if Screen Ptr == KBD
+// D == SCREEN + 1
+@KBD
+D=D-A
+@FILL
+D;JLT
+// Return
+@START
+0;JMP
+
+
+(EMPTYINIT)
+// Fill screen
+@KBD
+D=-A
+@SCREEN
+D=D+A
+(EMPTY)
+@KBD
+D=D+A
+A=D
+M=0
+D=D+1
+// Jump if Screen Ptr == KBD
+// D == SCREEN + 1
+@KBD
+D=D-A
+@EMPTY
+D;JLT
+// Return
+@START
+0;JMP
