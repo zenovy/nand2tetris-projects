@@ -26,7 +26,6 @@
  */
 
 CHIP CPU {
-
     IN  inM[16],         // M value input  (M = contents of RAM[A])
         instruction[16], // Instruction for execution
         reset;           // Signals whether to re-start the current
@@ -39,5 +38,35 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    // [0..2] = jump (MSB:<0/=0/LSB:>0)
+    // [3..5] = dest (MSB:A/D/LSB:M)
+    // [6..11] = comp
+    // [12] = a-comp
+    // [15] = instruction: 0: A-Instruction, 1: C-Instruction
+    /* A/M register */
+    Mux16(a=instruction, b=ALUout, sel=instruction[15], out=Aselect);
+    Not(in=instruction[15], out=ainstruction);
+    Or(a=ainstruction, b=instruction[5], out=loada);
+    ARegister(in=Aselect, load=loada, out=A, out[0..14]=addressM);
+    Mux16(a=A, b=inM, sel=instruction[12], out=AM);
+    /* D register */
+    And(a=instruction[15], b=instruction[4], out=loadd);
+    DRegister(in=ALUout, load=loadd, out=D);
+    /* ALU */
+    ALU(x=D, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUout, out=outM, zr=zr, ng=ng);
+    /* Jumps */
+    Or(a=zr, b=ng, out=notpos);
+    Not(in=notpos, out=pos);
+    And(a=ng, b=instruction[2], out=jlz);
+    And(a=zr, b=instruction[1], out=jeq);
+    And(a=pos, b=instruction[0], out=jgz);
+    Or(a=jeq, b=jlz, out=jor);
+    Or(a=jor, b=jgz, out=jor2);
+    And(a=jor2, b=instruction[15], out=isjmp);
+    Not(in=isjmp, out=isnotjmp);
+    Or(a=isnotjmp, b=ainstruction, out=inc);
+    /* Counter */
+    PC(in=A, load=isjmp, inc=inc, reset=reset, out[0..14]=pc);
+    /* Write M */
+    And(a=instruction[3], b=instruction[15], out=writeM);
 }
